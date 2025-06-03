@@ -1,4 +1,4 @@
-# SketchybarLua Config
+# Plain Text SketchybarLua Config
 
 ![alt text](image.png)
 
