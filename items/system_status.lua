@@ -68,7 +68,7 @@ local function update_status()
       "SWAP " .. swap_usage .. "% | " ..
       "CPU " .. cpu_load .. "% | " ..
       interface_status .. " | " ..
-      battery_percent .. "%B | " ..
+      battery_percent .. "% | " ..
       volume_percent .. "%S | " ..
       hostname .. " | " ..
       formatted_date
@@ -145,8 +145,21 @@ status:subscribe({ "forced", "routine", "system_woke" }, function(env)
 
   sbar.exec("pmset -g batt", function(batt_info)
     local found, _, charge = batt_info:find("(%d+)%%")
+    local status_indicator = ""
+
     if found then
-      battery_percent = charge
+      -- Determine charging status
+      if batt_info:find("AC Power") then
+        if batt_info:find("charged") then
+          status_indicator = "AC"
+        else
+          status_indicator = "~" -- charging
+        end
+      else
+        status_indicator = "!" -- discharging
+      end
+
+      battery_percent = status_indicator .. charge
     else
       battery_percent = "??"
     end
