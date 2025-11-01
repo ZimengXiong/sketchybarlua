@@ -4,6 +4,7 @@ return {
   red = 0xfffc5d7c,
   green = 0xff9ed072,
   blue = 0xff76cce0,
+  dark_blue = 0xff0a2e6d,
   yellow = 0xffe7c664,
   orange = 0xfff39660,
   magenta = 0xffb39df3,
@@ -14,10 +15,10 @@ return {
   transparent = 0x00000000,
 
   -- Semantic color names for UI elements
-  text_primary = 0xff0A0F1F,   -- Main text color (deep blue for light mode)
+  text_primary = 0xffD9C2BA,   -- Main text color
+  text_status = 0xff0a2e6d,    -- Dark blue status text
   text_secondary = 0xff9C8481, -- Secondary/inactive text
   accent = 0xffD9C2BA,         -- Accent color for highlights
-  dark_bg = 0xff29456F,        -- Dark mode background color
 
 
   bar = {

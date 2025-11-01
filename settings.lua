@@ -1,5 +1,5 @@
 return {
-  paddings = 5,
+  paddings = 2,
   group_paddings = 5,
   item_spacing = 2,
   bracket_height = 28,

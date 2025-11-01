@@ -5,176 +5,129 @@ local app_icons = require("helpers.app_icons")
 
 local spaces = {}
 
--- get all workspaces from aerospace
-local function get_aerospace_workspaces()
-  local workspaces = {}
-  local handle = io.popen("aerospace list-workspaces --all")
-  if handle then
-    for workspace in handle:lines() do
-      table.insert(workspaces, workspace)
-    end
-    handle:close()
-  end
-  return workspaces
+-- Get the maximum space index from yabai
+local handle = io.popen("yabai -m query --spaces | jq '.[-1].index'")
+local max_spaces = 11                  -- fallback
+if handle then
+  max_spaces = handle:read("*n") or 11 -- read as a number
+  handle:close()
 end
 
--- get apps for a specific workspace
-local function get_workspace_apps(workspace_id)
-  local apps = {}
-  local handle = io.popen("aerospace list-windows --workspace " .. workspace_id)
-  if handle then
-    for line in handle:lines() do
-      -- Parse the app name from the window info
-      -- Format is: "window_id | App Name | Window Title"
-      local app_name = line:match("^%s*[^|]+%s*|%s*(.-)%s*|")
-      if app_name and app_name ~= "" then
-        table.insert(apps, app_name)
-      end
-    end
-    handle:close()
-  end
-  return apps
-end
-
--- map app name to icon
-local function get_app_icon(app_name)
-  -- Clean up the app name (remove extra spaces)
-  app_name = app_name:gsub("^%s*(.-)%s*$", "%1")
-
-  -- Try different variations of the app name for better matching
-  local variations = {
-    app_name,
-    app_name:gsub("%s+%d*$", ""), -- Remove trailing numbers (version info)
-    app_name:gsub("%s+%([^)]*%)", ""), -- Remove parenthetical info
-    app_name:match("^([^%s]+)"), -- Just the first word
-  }
-
-  for _, variation in ipairs(variations) do
-    if app_icons[variation] then
-      return app_icons[variation]
-    end
-  end
-
-  -- If no match found, return default icon
-  return ":default:"
-end
-
--- create icon strip for workspace apps
-local function create_icon_strip(workspace_id)
-  local apps = get_workspace_apps(workspace_id)
-
-  if #apps > 0 then
-    local icon_strip = " "
-    for _, app in ipairs(apps) do
-      local icon = get_app_icon(app)
-      icon_strip = icon_strip .. icon .. " "
-    end
-    return icon_strip
-  else
-    return "" -- Return empty string for empty workspaces
-  end
-end
-
-local workspaces = get_aerospace_workspaces()
-
--- Create space items for each workspace
-for _, workspace_id in ipairs(workspaces) do
-  local space = sbar.add("item", "space." .. workspace_id, {
-    position = "left",
+for i = 1, max_spaces, 1 do
+  local space = sbar.add("space", "space." .. i, {
+    space = i,
     icon = {
       font = {
         family = settings.font.text,
         style = settings.font.style_map["Regular"],
-        size = 16
+        size = 18
       },
-      string = workspace_id,
-      padding_left = 8,
-      padding_right = 8,
-      color = colors.text_primary,
-      y_offset = 0,
+      string = i,
+      padding_left = 5,
+      padding_right = 5,
+      color = colors.text_status,
+      highlight_color = colors.text_status,
     },
     label = {
-      font = {
-        family = "sketchybar-app-font", -- Use the app icon font
-        style = settings.font.style_map["Regular"],
-        size = 16
-      },
-      padding_left = 4,
-      padding_right = 8,
-      color = colors.text_primary,
-      y_offset = -1, -- Slightly adjust icon alignment
+      padding_right = 5,
+      color = colors.text_status,
+      highlight_color = colors.text_status,
+      font = "sketchybar-app-font:Regular:16.0",
+      y_offset = -1,
     },
+    -- color = color.transparent,
     background = {
-      height = 24,
-      corner_radius = 12,
+      color = colors.transparent,
       border_width = 0,
+      height = 26,
+      border_color = colors.transparent,
+      padding_right = 15, -- Move padding to background to control color
+      -- border_color = colors.yellow,
     },
-    click_script = "aerospace workspace " .. workspace_id,
+    -- popup = { background = { border_width = 5, border_color = colors.black } }
   })
 
-  -- Set initial icon strip
-  local icon_strip = create_icon_strip(workspace_id)
-  space:set({
-    icon = { string = workspace_id },
-    label = { string = icon_strip }
+  spaces[i] = space
+
+  local space_bracket = sbar.add("bracket", { space.name }, {
+    background = {
+      color = colors.transparent,
+      border_color = colors.transparent,
+      height = 28,
+      border_width = 0
+    }
   })
 
-  -- Subscribe to workspace change events
-  space:subscribe("aerospace_workspace_change", function(env)
-    local focused_workspace = env.FOCUSED_WORKSPACE
-    local is_focused = (focused_workspace == workspace_id)
+  -- Padding space
+  sbar.add("space", "space.padding." .. i, {
+    space = i,
+    script = "",
+    width = settings.group_paddings,
+  })
 
-    if is_focused then
-      space:set({
-        background = {
-          drawing = true,
-          color = { alpha = 0 }, -- Transparent background
-          border_color = colors.text_primary,
-          border_width = 2,
-          corner_radius = "0x04100404", -- top-left:12, top-right:6, bottom-right:6, bottom-left:6
-          height = 26,
-        },
-        icon = { color = colors.text_primary },
-        label = { color = colors.text_primary }
-      })
+  local space_popup = sbar.add("item", {
+    position = "popup." .. space.name,
+    padding_left = 0,
+    padding_right = 0,
+    background = {
+      drawing = true,
+      image = {
+        corner_radius = 0,
+        scale = 0.2
+      }
+    }
+  })
+
+  space:subscribe("space_change", function(env)
+    local selected = env.SELECTED == "true"
+    space:set({
+      icon = {
+        highlight = selected,
+        font = {
+          family = settings.font.text,
+          style = settings.font.style_map[selected and "Bold" or "Regular"],
+          size = 18
+        }
+      },
+      label = { highlight = selected },
+      background = { border_color = colors.transparent }
+    })
+    space_bracket:set({
+      background = { border_color = colors.transparent }
+    })
+  end)
+
+  space:subscribe("mouse.clicked", function(env)
+    if env.BUTTON == "other" then
+      -- Right click functionality could be added here
     else
-      space:set({
-        background = {
-          drawing = false,
-          border_width = 0,
-        },
-        icon = { color = colors.text_primary },
-        label = { color = colors.text_primary }
-      })
+      sbar.exec("sh /Users/zimengx/code/scripts/change_spaces.sh " .. env.SID)
     end
-
-    -- Update the icon strip for this workspace
-    local new_icon_strip = create_icon_strip(workspace_id)
-    space:set({ label = { string = new_icon_strip } })
   end)
 end
 
--- Add global event subscription
-sbar.add("event", "aerospace_workspace_change")
+local space_window_observer = sbar.add("item", {
+  drawing = false,
+  updates = true,
+})
 
--- Get current focused workspace for initial state
-local handle = io.popen("aerospace list-workspaces --focused")
-local current_workspace = "1" -- fallback
-if handle then
-  current_workspace = handle:read("*l") or "1"
-  handle:close()
-end
-
--- Trigger initial workspace state
-sbar.trigger("aerospace_workspace_change", { FOCUSED_WORKSPACE = current_workspace })
-
-local function update_workspace_icons()
-  for _, workspace_id in ipairs(workspaces) do
-    local icon_strip = create_icon_strip(workspace_id)
-    sbar.set("space." .. workspace_id, { label = { string = icon_strip } })
+space_window_observer:subscribe("space_windows_change", function(env)
+  local icon_line = ""
+  local no_app = true
+  local apps = (env.INFO and env.INFO.apps) or {}
+  for app, count in pairs(apps) do
+    no_app = false
+    local lookup = app_icons[app]
+    local icon = lookup or app_icons["Default"] or ""
+    if icon ~= "" then
+      icon_line = icon_line .. " " .. icon
+    end
   end
-end
 
--- Subscribe to window events to update icons in real-time
-sbar.add("event", "aerospace_window_event")
-sbar.subscribe("aerospace_window_event", update_workspace_icons)
+  if (no_app) then
+    icon_line = " —"
+  end
+  sbar.animate("tanh", 10, function()
+    spaces[env.INFO.space]:set({ label = icon_line })
+  end)
+end)

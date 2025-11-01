@@ -8,10 +8,10 @@ function ui.create_bracket(name, items, opts)
     opts = opts or {}
     local bracket_config = {
         background = {
-            color = opts.background_color or colors.bg1,
+            color = opts.background_color or colors.transparent,
             height = opts.height or settings.bracket_height,
-            border_width = opts.border_width or settings.border_width,
-            border_color = opts.border_color or colors.border,
+            border_width = opts.border_width or 0,
+            border_color = opts.border_color or colors.transparent,
         }
     }
 
@@ -37,11 +37,11 @@ function ui.widget_defaults()
     return {
         position = "right",
         label = {
-            color = colors.text_primary,
+            color = colors.text_status,
             font = { family = settings.font.numbers }
         },
         icon = {
-            color = colors.text_primary,
+            color = colors.text_status,
             font = {
                 style = settings.font.style_map["Regular"],
                 size = 14.0,
